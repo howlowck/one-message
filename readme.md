@@ -21,11 +21,11 @@ add `'OneMessage'	  => 'Howlowck\OneMessage\Facades\OneMessage'` in `aliases` ar
 
 There are three type of messages: Error, Success, and Info.
 
-** Add Message **
+**Add Message**
 
 	OneMessage::addError(['authorization' => 'You are unauthorized!!!']);
 
-  *** or you can throw a MessageBag in there ***
+  ***or you can throw a MessageBag in there***
 
 	$v = Validator::make($data, $rules);
 	if ($v->fails()) {
@@ -33,16 +33,16 @@ There are three type of messages: Error, Success, and Info.
 	}
 	
 
-** Add Message for Flash **  
+**Add Message for Flash**  
 When adding to the flash data, it will not be available in the current request.
 
 	OneMessage::addError(['authorization' => 'You are unauthorized!!!'], true);
 
 
-** get Message **
+**get Message**
 
 	OneMessage::getError();
 
-  *** or get a specific message with key ***
+  ***or get a specific message with key***
 
 	OneMessage::getError('authorization');

@@ -1,6 +1,6 @@
 {
     "name": "howlowck/one-message",
-    "description": "",
+    "description": "Laravel Package for managing messages",
     "authors": [
         {
             "name": "Hao Luo",

@@ -1,4 +1,4 @@
-# OneMessage
+# OneMessage [![Build Status](https://travis-ci.org/howlowck/one-message.png?branch=master)](https://travis-ci.org/howlowck/one-message)
 
 For Easy Management of Messages in One singleton.  Anywhere in the process you want to add a message just add it in the singleton and in the view just use it to display your messages.
 

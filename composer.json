@@ -1,0 +1,24 @@
+{
+    "name": "howlowck/one-message",
+    "description": "",
+    "authors": [
+        {
+            "name": "Hao Luo",
+            "email": "howlowck@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0",
+        "illuminate/support": "~4",
+        "illuminate/session": "~4"
+    },
+    "require-dev": {
+        "mockery/mockery": "dev-master@dev"
+    },
+    "autoload": {
+        "psr-0": {
+            "Howlowck\\OneMessage": "src/"
+        }
+    },
+    "minimum-stability": "dev"
+}

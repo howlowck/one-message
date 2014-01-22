@@ -83,10 +83,13 @@ class OneMessage implements ArrayableInterface {
      */
     protected function addMessage($name, $messages)
     {
-    	if ($messages instanceof MessageBag) {
-    		$messages = $messages->all();
-    	}
-
+        
+        if ($messages instanceof MessageBag) {
+            $messages = $messages->all();
+        } else {
+            $messages = (array) $messages;
+        }
+        
         foreach( $messages as $key => $message) {
             $this->$name->put($key , $message);
         }

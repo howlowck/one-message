@@ -27,7 +27,11 @@ class OneMessageTest extends \PHPUnit_Framework_TestCase {
 		$this->redirectSomewhere();		
 		$this->assertInstanceOf('Howlowck\OneMessage\OneMessage', $this->message);
 	}
-
+	public function testOneMessageSetStringToMessage()
+	{
+		$this->message->addError('hello!');
+		$this->assertEquals(['hello!'], $this->message->getError());
+	}
 	public function testGetMessages()
 	{
 		$data = [

@@ -18,10 +18,13 @@ class OneMessageServiceProvider extends ServiceProvider {
 	 */
 	public function register()
 	{
+
+		$this->app['config']->package('howlowck/one-message', __DIR__.'/../../config');
+
 		$this->app->bindShared('onemessage', function($app) {
 			$session = $app->make('session');
-	        return new OneMessage($session);
-	    });
+			return new OneMessage($session, $app['config']);
+    });
 	}
 
 	/**

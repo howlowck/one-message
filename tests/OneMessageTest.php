@@ -6,6 +6,12 @@ use Mockery as m;
 class OneMessageTest extends \PHPUnit_Framework_TestCase {
 	protected $session;
 	protected $message;
+	protected $messageTypes = array(
+		'info',
+		'warning',
+		'error',
+		'success'
+	);
 
 	public function setUp()
 	{
@@ -24,7 +30,7 @@ class OneMessageTest extends \PHPUnit_Framework_TestCase {
 
 	public function testOneMessageCreateWithSessionData()
 	{
-		$this->redirectSomewhere();		
+		$this->redirectSomewhere();
 		$this->assertInstanceOf('Howlowck\OneMessage\OneMessage', $this->message);
 	}
 	public function testOneMessageSetStringToMessage()
@@ -86,7 +92,7 @@ class OneMessageTest extends \PHPUnit_Framework_TestCase {
 			'password' => 'this is the wrong password!',
 			'email' => 'this is a duplicate email!'
 		];
-		
+
 		$messageBag = m::mock('Illuminate\Support\MessageBag');
 		$messageBag->shouldReceive('all')->once()->andReturn($data);
 
@@ -97,7 +103,7 @@ class OneMessageTest extends \PHPUnit_Framework_TestCase {
 	public function testGetFlashMessageFromMessageBagWhenSetToFlash()
 	{
 		$data = [
-		'error' => 
+		'error' =>
 			[
 			'password' => 'this is the wrong password!',
 			'email' => 'this is a duplicate email!'
@@ -105,15 +111,20 @@ class OneMessageTest extends \PHPUnit_Framework_TestCase {
 		'success' => [],
 		'info' => []
 		];
-		
+
 		$messageBag = m::mock('Illuminate\Support\MessageBag');
 		$messageBag->shouldReceive('all')->once()->andReturn($data);
 		$this->session->shouldReceive('flash')->once()->andReturn(null);
 		$this->message->addError($messageBag, true);
-		
+
 		$this->redirectSomewhere($data);
 
 		$this->assertEquals($data['error']['email'], $this->message->getError('email'));
+	}
+
+	public function testGetLevels()
+	{
+		$this->assertEquals($this->messageTypes, $this->message->getMessageTypes());
 	}
 
 	public function testGetNoMessageFromMessageBagWhenNotSetToFlash()
@@ -126,12 +137,12 @@ class OneMessageTest extends \PHPUnit_Framework_TestCase {
 			'success' => [],
 			'info' => []
 		];
-		
+
 		$messageBag = m::mock('Illuminate\Support\MessageBag');
 		$messageBag->shouldReceive('all')->once()->andReturn($data);
 
 		$this->message->addError($messageBag);
-		
+
 		$this->redirectSomewhere();
 
 		$this->assertNull($this->message->getError('email'));
@@ -150,7 +161,12 @@ class OneMessageTest extends \PHPUnit_Framework_TestCase {
 				 'error' => []
 				];
 		}
-		$this->session = m::mock('stdClass');
+
+		$this->config = m::mock('Illuminate\Config\Repository');
+		$this->config->shouldReceive('get')->andReturn($this->messageTypes);
+
+
+		$this->session = m::mock('Illuminate\Session\Store');
 		if ($hasSession) {
 			$this->session->shouldReceive('has')->once()->andReturn(true);
 			$this->session->shouldReceive('get')->once()->andReturn($data);
@@ -158,6 +174,6 @@ class OneMessageTest extends \PHPUnit_Framework_TestCase {
 			$this->session->shouldReceive('has')->once()->andReturn(false);
 		}
 
-		$this->message = new OneMessage($this->session);
+		$this->message = new OneMessage($this->session, $this->config);
 	}
 }

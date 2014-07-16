@@ -1,156 +1,168 @@
 <?php namespace Howlowck\OneMessage;
 
+use Illuminate\Session\Store;
+use Illuminate\Config\Repository;
 use Illuminate\Support\Collection;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\Contracts\ArrayableInterface;
 
 class OneMessage implements ArrayableInterface {
+
 	protected $error;
-    protected $success;
-    protected $info;
-    protected $flashData;
-    protected $purged;
-    protected $sessionName = 'OneMessage';
+	protected $success;
+	protected $info;
 
-    public function __construct($session)
-    {
-    	$this->session = $session;
-    	$this->purge();
+	protected $messages;
+	protected $flashMessages;
+	protected $flashData;
+	protected $purged;
+	protected $sessionName = 'OneMessage';
 
-        if ($this->session->has($this->sessionName)) {
-            $this->populateFromSession();
-        }
+	protected $config;
+
+	public function __construct( Store $session, Repository $config)
+	{
+		$this->session = $session;
+		$this->config = $config;
+
+		$this->purge();
+
+		if ($this->session->has($this->sessionName)) {
+			$this->populateFromSession();
+		}
+	}
+
+  public function __call( $method, $params ) {
+
+    if( $var = $this->_validMessageMethod( $method, 'get{var}' ) ){
+      return $this->_getMessageVar( $var, $params );
     }
 
-    public function hasError()
-    {
-        return ! $this->error->isEmpty();
+    if( $var = $this->_validMessageMethod( $method, 'add{var}' ) ){
+      return $this->_addMessageVar( $var, $params );
     }
 
-    public function hasSuccess()
-    {
-        return ! $this->success->isEmpty();
+    if( $var = $this->_validMessageMethod( $method, 'has{var}' ) ){
+      return $this->_hasMessageVar( $var, $params );
     }
 
-    public function hasInfo()
-    {
-        return ! $this->info->isEmpty();
-    }
+  }
 
-    public function addError($messages, $flash = false)
-    {
-        $this->addContent('error', $messages, $flash);
-    }
+	private function _validMessageMethod( $method, $method_patthern ){
+		$match = NULL;
+		$var_pattern = '(?P<var>[A-Za-z0-9]+)';
+		preg_match('/^' . str_replace( '{var}', $var_pattern, $method_patthern ) . '$/', $method, $match );
+		$var = ( isset( $match['var'] ) ? snake_case( $match['var'] ) : false );
 
-    public function addSuccess($messages, $flash = false)
-    {
-        $this->addContent('success', $messages, $flash);
-    }
+		return $var && array_key_exists( $var, $this->messages ) ? $var : false;
+	}
 
-    public function addInfo($messages, $flash = false)
-    {
-        $this->addContent('info', $messages, $flash);
-    }
+  private function _getMessageVar( $messageType, $params ){
+		$key = isset( $params[0] ) ? $params[0] : NULL;
+    return $this->getMessage( $messageType, $key );
+  }
 
-    public function getError($key = null)
-    {
-        return $this->getMessage('error', $key);
-    }
+  private function _addMessageVar( $messageType, $params ){
+		$messages = isset( $params[0] ) ? $params[0] : NULL;
+		$flash = isset( $params[1] ) ? $params[1] : false;
 
-    public function getSuccess($key = null)
-    {
-        return $this->getMessage('success', $key);
-    }
+		if( ! $messages ){
+			throw new InvalidArgumentException("Method add$messageType 2nd argument is invalid  (Array or MessageBag expected)");
+		}
 
-    public function getInfo($key = null)
-    {
-        return $this->getMessage('info', $key);
-    }
+		$this->addContent( $messageType, $messages, $flash );
+    return true;
+  }
 
-    protected function addContent($name, $messages, $flash)
-    {
-        if ($flash) {
-        	$this->addFlash($name, $messages);
-        } else {
-        	$this->addMessage($name, $messages);
-        }
-    }
+	private function _hasMessageVar( $messageType, $params ){
+		return !$this->messages[ $messageType ]->isEmpty();
+	}
 
-    /**
-     * Adding a Message with a given type
-     * @param $name
-     * @param mixed $messages
-     */
-    protected function addMessage($name, $messages)
-    {
-        
-        if ($messages instanceof MessageBag) {
-            $messages = $messages->all();
-        } else {
-            $messages = (array) $messages;
-        }
-        
-        foreach( $messages as $key => $message) {
-            $this->$name->put($key , $message);
-        }
-    }
+	public function getMessageTypes(){
+		return (array) $this->config->get('one-message::message_types');
+	}
 
-    protected function addFlash($name, $messages)
-    {
-    	if ($messages instanceof MessageBag) {
-    		$messages = $messages->all();
-    	}
-        foreach( $messages as $key => $message) {
-            $this->flashData[$name]->put($key, $message);
-        }
-        $this->flash();
-    }
+	protected function addContent($name, $messages, $flash)
+	{
+		if ($messages instanceof MessageBag) {
+				$messages = $messages->all();
+		} else {
+				$messages = (array) $messages;
+		}
 
-    protected function getMessage($name, $key = null)
-    {
-        if ($key) {
-            return $this->$name->get($key);
-        }
-        return $this->$name->all();
-    }
+		if ($flash) {
+			$this->addFlash($name, $messages);
+		} else {
+			$this->addMessage($name, $messages);
+		}
+	}
 
-    protected function flash()
-    {
-        $data = [];
-        $data['error'] = $this->flashData['error']->all();
-        $data['success'] = $this->flashData['success']->all();
-        $data['info'] = $this->flashData['info']->all();
-        $this->session->flash($this->sessionName, $data);
-    }
+	protected function addMessage($name, $messages)
+	{
+		foreach( $messages as $key => $message) {
+			$this->messages[$name]->put($key, $message);
+		}
+	}
 
-    protected function populateFromSession()
-    {
-    	$messages = $this->session->get($this->sessionName);
-    	$this->error = with(new Collection())->make($messages['error']);
-    	$this->success = with(new Collection())->make($messages['success']);
-    	$this->info = with(new Collection())->make($messages['info']);
-    	$this->purged = false;
-    }
+	protected function addFlash($name, $messages)
+	{
+		foreach( $messages as $key => $message) {
+				$this->flashMessages[$name]->put($key, $message);
+		}
 
-    protected function purge()
-    {
-        $this->error = new Collection();
-        $this->success = new Collection();
-        $this->info = new Collection;
-        $this->flashData = [
-            'error' => new Collection(),
-            'success' => new Collection(),
-            'info' => new Collection(),
-        ];
-        $this->purged = true;
-    }
-    public function toArray()
-    {
-    	return [
-    		'error' => getMessage('error'),
-    		'success' => getMessage('success'),
-    		'info' => getMessage('info')
-    	];
-    }
+		$this->flash();
+	}
+
+	protected function flash()
+	{
+		$data = [];
+
+		foreach( $this->flashMessages as $messageType => $messages ){
+			$data[ $messageType ] = $messages->all();
+		}
+
+		$this->session->flash($this->sessionName, $data);
+	}
+
+	protected function populateFromSession()
+	{
+		$messages = $this->session->get( $this->sessionName );
+
+		foreach( $messages as $messageType => $messages ){
+			$this->messages[ $messageType ] = with(new Collection())->make( $messages );
+		}
+
+		$this->purged = false;
+	}
+
+	protected function purge()
+	{
+		$this->messages = array();
+		$this->flashMessages = array();
+
+		foreach( $this->getMessageTypes() as $messageType ){
+			$this->messages[ $messageType ] = new Collection();
+			$this->flashMessages[ $messageType ] = new Collection();
+		}
+
+		$this->purged = true;
+	}
+
+	protected function getMessage($name, $key = null)
+	{
+		if ($key) {
+			return $this->messages[ $name ]->get($key);
+		}
+		return $this->messages[ $name ]->all();
+	}
+
+	public function toArray()
+	{
+		$return = [];
+		foreach( $this->getMessageTypes() as $messageType ){
+			$return[ $messageType ] = $this->getMessage( $messageType );
+		}
+		return $return;
+	}
 }
 
